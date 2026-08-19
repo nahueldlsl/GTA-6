@@ -1,0 +1,296 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@400;700;800&family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Outfit:wght@400;600;800;900&family=Space+Grotesk:wght@400;600;700&family=Syne:wght@700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --gta-neon-pink: #ff2a85;
+  --gta-neon-cyan: #00f0ff;
+  --gta-sunset-orange: #ff7b00;
+  --gta-sunset-gold: #ffb800;
+  --gta-vice-purple: #1a0826;
+  --gta-dark-obsidian: #08090d;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050608;
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========================================================================== */
+/* GTA VI TYPOGRAPHY CLASSES                                                  */
+/* ========================================================================== */
+.font-gta-title {
+  font-family: 'Syne', 'Montserrat', sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.font-gta-roman {
+  font-family: 'Cinzel', serif;
+  letter-spacing: -0.02em;
+}
+
+.font-bebas {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-mono-gta {
+  font-family: 'JetBrains Mono', 'Space Grotesk', monospace;
+}
+
+/* ========================================================================== */
+/* GTA VI COLOR GRADIENTS & TEXT CLIPS                                        */
+/* ========================================================================== */
+.gta-text-sunset {
+  background: linear-gradient(135deg, #ff2a85 0%, #ff7b00 50%, #ffc800 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gta-text-cyan-pink {
+  background: linear-gradient(135deg, #00f0ff 0%, #ff2a85 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gta-logo-vi {
+  background: linear-gradient(180deg, #ff2a85 0%, #ff6b35 55%, #ffd166 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 25px rgba(255, 42, 133, 0.7));
+}
+
+/* ========================================================================== */
+/* GTA VI CINEMATIC SATELLITE ZOOM & CAMERA WIPES                             */
+/* ========================================================================== */
+@keyframes satelliteSnapZoom {
+  0% {
+    transform: scale(1);
+    filter: brightness(1) blur(0px);
+  }
+  35% {
+    transform: scale(1.18);
+    filter: brightness(2.2) blur(6px) contrast(1.4);
+  }
+  65% {
+    transform: scale(0.92);
+    filter: brightness(1.6) blur(3px);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1) blur(0px);
+  }
+}
+
+.animate-satellite-zoom {
+  animation: satelliteSnapZoom 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========================================================================== */
+/* CHROMATIC ABERRATION & GLITCH SHADER                                       */
+/* ========================================================================== */
+@keyframes chromaticGlitch {
+  0% {
+    transform: translate(0);
+    filter: none;
+  }
+  20% {
+    transform: translate(-3px, 1.5px);
+    filter: drop-shadow(3px 0 0 rgba(255, 0, 80, 0.7)) drop-shadow(-3px 0 0 rgba(0, 240, 255, 0.7));
+  }
+  40% {
+    transform: translate(3px, -1.5px);
+    filter: drop-shadow(-3px 0 0 rgba(255, 0, 80, 0.7)) drop-shadow(3px 0 0 rgba(0, 240, 255, 0.7));
+  }
+  60% {
+    transform: translate(-1.5px, 2px);
+    filter: drop-shadow(2px 0 0 rgba(255, 0, 80, 0.5)) drop-shadow(-2px 0 0 rgba(0, 240, 255, 0.5));
+  }
+  80% {
+    transform: translate(1.5px, -1px);
+    filter: drop-shadow(-2px 0 0 rgba(255, 0, 80, 0.5)) drop-shadow(2px 0 0 rgba(0, 240, 255, 0.5));
+  }
+  100% {
+    transform: translate(0);
+    filter: none;
+  }
+}
+
+.gta-glitch-active {
+  animation: chromaticGlitch 0.35s ease-in-out infinite;
+}
+
+/* ========================================================================== */
+/* SCANLINES & HEAT DISTORTION OVERLAY                                        */
+/* ========================================================================== */
+.gta-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.35) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* ========================================================================== */
+/* SOCIAL MEDIA / VICE VIRAL FLOATING REACTIONS                               */
+/* ========================================================================== */
+@keyframes floatReaction {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0px) scale(1.1);
+  }
+  80% {
+    opacity: 0.9;
+    transform: translateY(-80px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-140px) scale(0.8);
+  }
+}
+
+.animate-float-reaction {
+  animation: floatReaction 2.4s ease-out forwards;
+}
+
+@keyframes pulseLive {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.2);
+  }
+}
+
+.animate-pulse-live {
+  animation: pulseLive 1.2s ease-in-out infinite;
+}
+
+/* ========================================================================== */
+/* KEN BURNS CINEMATIC SLOW PAN / ZOOM                                        */
+/* ========================================================================== */
+@keyframes kenBurnsSlow {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.06) translate(-1%, -0.8%);
+  }
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+.animate-ken-burns {
+  animation: kenBurnsSlow 24s ease-in-out infinite alternate;
+}
+
+/* ========================================================================== */
+/* ROCKSTAR DECISION IMPACT FLASH                                             */
+/* ========================================================================== */
+@keyframes decisionImpactBanner {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(15px);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+.animate-decision-banner {
+  animation: decisionImpactBanner 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========================================================================== */
+/* LOCATION STAMP TYPEWRITER REVEAL                                           */
+/* ========================================================================== */
+@keyframes locationStampIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-15px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0px);
+  }
+}
+
+.animate-location-stamp {
+  animation: locationStampIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #06070a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252836;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff2a85;
+}
+
+/* ========================================================================== */
+/* GTA WANTED STARS FLASHING & ACTIVE ANIMATIONS                              */
+/* ========================================================================== */
+@keyframes gtaWantedFlash {
+  0%, 100% {
+    opacity: 1;
+    color: #facc15;
+    filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
+  }
+  50% {
+    opacity: 0.15;
+    color: #71717a;
+    filter: none;
+  }
+}
+
+.animate-gta-star-evading {
+  animation: gtaWantedFlash 0.75s ease-in-out infinite;
+}
+
+@keyframes gtaWantedActive {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 42, 133, 0.9));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.8));
+  }
+}
+
+.animate-gta-star-active {
+  animation: gtaWantedActive 1.2s ease-in-out infinite;
+}
