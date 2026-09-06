@@ -17,7 +17,8 @@ import type {
   StoryNode,
   CharacterId
 } from '../types/game';
-import { STORY_NODES, INITIAL_SIGNAL_MESSAGES, INSTA_POSTS } from '../data/storyGraph';
+import { INITIAL_SIGNAL_MESSAGES, INSTA_POSTS } from '../data/storyGraph';
+import { getMergedStoryNodes } from './editorStore';
 import { audioEngine } from '../engine/audioEngine';
 import { processEffects } from '../services/effectProcessor';
 import { BOT_REPLY_DELAY_MS } from '../constants/audio';
@@ -77,7 +78,7 @@ export interface GameStore extends GameState {
 const INITIAL_GAME_STATE: GameState = {
   version: '1.5.0',
   timestamp: Date.now(),
-  currentNodeId: 'node_custom_intro',
+  currentNodeId: 'node_new_cinematic_1',
   cleanCash: 12000,
   dirtyCash: 35000,
   heatLevel: 0, // Clean wanted status at initial start
@@ -99,7 +100,7 @@ const INITIAL_GAME_STATE: GameState = {
   flags: {},
   history: [
     {
-      nodeId: 'node_custom_intro',
+      nodeId: 'node_new_cinematic_1',
       timestamp: Date.now(),
       title: 'Introducción a Leonida'
     }
@@ -262,7 +263,7 @@ export const useGameStore = create<GameStore>()(
           state.applyEffects(choice.effects);
         }
 
-        const targetNode = STORY_NODES[choice.targetNodeId];
+        const targetNode = getMergedStoryNodes()[choice.targetNodeId];
         if (!targetNode) return;
 
         const unlocked = checkAndUnlockEnding(state.unlockedEndings, targetNode);
@@ -323,7 +324,7 @@ export const useGameStore = create<GameStore>()(
         const state = get();
         if (state.isPaused || state.timerMode !== 'INTENSE') return;
 
-        const currentNode = STORY_NODES[state.currentNodeId];
+        const currentNode = getMergedStoryNodes()[state.currentNodeId];
         if (!currentNode || !currentNode.decisionWindow) return;
 
         const defaultChoiceId = currentNode.decisionWindow.defaultChoiceId;
@@ -336,7 +337,7 @@ export const useGameStore = create<GameStore>()(
 
       handleQteResult: (success) => {
         const state = get();
-        const currentNode = STORY_NODES[state.currentNodeId];
+        const currentNode = getMergedStoryNodes()[state.currentNodeId];
         if (!currentNode || !currentNode.qte) return;
 
         if (success) {
@@ -353,7 +354,7 @@ export const useGameStore = create<GameStore>()(
 
       jumpToNode: (nodeId) => {
         const state = get();
-        const targetNode = STORY_NODES[nodeId];
+        const targetNode = getMergedStoryNodes()[nodeId];
         if (!targetNode) return;
 
         const unlocked = checkAndUnlockEnding(state.unlockedEndings, targetNode);

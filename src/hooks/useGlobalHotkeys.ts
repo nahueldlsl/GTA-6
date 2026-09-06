@@ -4,11 +4,13 @@
 
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useEditorStore } from '../store/editorStore';
 
 export function useGlobalHotkeys() {
   const togglePhone = useGameStore((s) => s.togglePhone);
   const togglePauseModal = useGameStore((s) => s.togglePauseModal);
   const toggleMap = useGameStore((s) => s.toggleMap);
+  const toggleEditor = useEditorStore((s) => s.toggleEditor);
 
   // Use refs to track reactive state without re-attaching listeners on every change
   const isPhoneOpenRef = useRef(false);
@@ -32,6 +34,13 @@ export function useGlobalHotkeys() {
         if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable) {
           return;
         }
+      }
+
+      // Admin Editor: Ctrl + Shift + E
+      if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+        e.preventDefault();
+        toggleEditor();
+        return;
       }
 
       // Toggle Leonida Map with 'Tab'
@@ -66,5 +75,5 @@ export function useGlobalHotkeys() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePhone, togglePauseModal, toggleMap]);
+  }, [togglePhone, togglePauseModal, toggleMap, toggleEditor]);
 }

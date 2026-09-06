@@ -9,9 +9,11 @@ import { ACT3_NODES } from './nodes/act3';
 import { ACT4_NODES } from './nodes/act4';
 import { ACT5_NODES } from './nodes/act5';
 import { EPILOGUE_NODES } from './nodes/epilogues';
+import { INTRO_CINEMATICS } from './nodes/introCinematics';
 
 // Re-export aggregated story nodes
 export const STORY_NODES: Record<string, StoryNode> = {
+  ...INTRO_CINEMATICS,
   ...ACT1_NODES,
   ...ACT2_NODES,
   ...ACT3_NODES,

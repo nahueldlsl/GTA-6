@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from './store/gameStore';
+import { useEditorStore } from './store/editorStore';
 import { STORY_NODES } from './data/storyGraph';
 import { TitleScreen } from './components/TitleScreen';
 import { CinematicPlayer } from './components/CinematicPlayer/CinematicPlayer';
@@ -11,13 +12,17 @@ import { PhoneNotificationBanner } from './components/HUD/PhoneNotificationBanne
 import { audioEngine } from './engine/audioEngine';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys';
 import { useHeatCooldown } from './hooks/useHeatCooldown';
+import { StoryEditor } from './components/Admin/StoryEditor';
 
 export const App: React.FC = () => {
   const currentNodeId = useGameStore((s) => s.currentNodeId);
   const initGame = useGameStore((s) => s.initGame);
+  const isEditorOpen = useEditorStore((s) => s.isEditorOpen);
+  const customNodes = useEditorStore((s) => s.customNodes);
+  const mergedNodes = { ...STORY_NODES, ...customNodes };
   const [hasStarted, setHasStarted] = useState(false);
 
-  const currentNode = STORY_NODES[currentNodeId] || STORY_NODES['node_custom_intro'] || STORY_NODES['node_act1_keys_workshop'];
+  const currentNode = mergedNodes[currentNodeId] || mergedNodes['node_custom_intro'] || mergedNodes['node_act1_keys_workshop'];
 
   // Global hotkeys hook (Tab, M, P, ESC) with input safety
   useGlobalHotkeys();
@@ -49,6 +54,7 @@ export const App: React.FC = () => {
           <PauseModal />
         </>
       )}
+      {isEditorOpen && <StoryEditor />}
     </div>
   );
 };
