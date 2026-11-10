@@ -12,7 +12,7 @@ import '@xyflow/react/dist/style.css';
 import { useEditorStore } from '../../store/editorStore';
 import { STORY_NODES } from '../../data/storyGraph';
 import { PropertiesPanel } from './PropertiesPanel';
-import { X, Download, Save, Plus } from 'lucide-react';
+import { X, Download, Plus } from 'lucide-react';
 import type { StoryNode } from '../../types/game';
 
 // Custom node type to show more info if needed, but default is fine for now
@@ -156,7 +156,7 @@ export const StoryEditor: React.FC = () => {
           onNodeClick={onNodeClick}
           onConnect={onConnect}
           fitView
-          theme="dark"
+          colorMode="dark"
         >
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           <Controls />

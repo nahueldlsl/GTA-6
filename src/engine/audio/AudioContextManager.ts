@@ -7,6 +7,7 @@ export class AudioContextManager {
   private masterGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
+  private duckGain: GainNode | null = null;
   private phoneFilter: BiquadFilterNode | null = null;
   public isMuted: boolean = false;
 
@@ -30,14 +31,27 @@ export class AudioContextManager {
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
 
+    // Separate ducking stage so ducking never overrides the user's chosen radio volume
+    this.duckGain = this.ctx.createGain();
+    this.duckGain.gain.setValueAtTime(1, this.ctx.currentTime);
+
     this.sfxGain = this.ctx.createGain();
     this.sfxGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
 
-    // Route: [Music & SFX] -> [phoneFilter] -> [masterGain] -> [destination]
-    this.musicGain.connect(this.phoneFilter);
+    // Route: [Music -> duck] & [SFX] -> [phoneFilter] -> [masterGain] -> [destination]
+    this.musicGain.connect(this.duckGain);
+    this.duckGain.connect(this.phoneFilter);
     this.sfxGain.connect(this.phoneFilter);
     this.phoneFilter.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
+  }
+
+  /** Smoothly lowers the radio bus (e.g. while a cinematic with dialogue plays). */
+  public setDucking(active: boolean) {
+    if (!this.duckGain || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.duckGain.gain.cancelScheduledValues(now);
+    this.duckGain.gain.setTargetAtTime(active ? 0.2 : 1, now, active ? 0.25 : 0.6);
   }
 
   public ensureContext() {

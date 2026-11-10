@@ -4,7 +4,6 @@
 
 import React from 'react';
 import { Star, ShieldAlert, Radio } from 'lucide-react';
-import { audioEngine } from '../../engine/audioEngine';
 
 interface WantedStarsProps {
   heatLevel: number;

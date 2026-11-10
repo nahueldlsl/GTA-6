@@ -6,7 +6,7 @@ export type NodeId = string;
 export type ChoiceId = string;
 export type FlagKey = string;
 export type CharacterId = 'jason' | 'lucia' | 'cal' | 'boobie' | 'drequan' | 'baeluxe' | 'roxy' | 'raul' | 'brian';
-export type PhoneAppId = 'signal' | 'viceradio' | 'vicemaps' | 'instavice';
+export type PhoneAppId = 'signal' | 'viceradio' | 'vicemaps' | 'instavice' | 'darkpay' | 'heistplanner';
 
 export type HeatLevel = 0 | 1 | 2 | 3 | 4 | 5;
 export type DangerLevel = 'SAFE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME' | 'FATAL';

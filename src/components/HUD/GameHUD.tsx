@@ -3,8 +3,8 @@
 // ============================================================================
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { STORY_NODES } from '../../data/storyGraph';
+import { useGameStore, PROTAGONIST_PERKS } from '../../store/gameStore';
+import { getMergedStoryNodes } from '../../store/editorStore';
 import { audioEngine } from '../../engine/audioEngine';
 import { FinancesDisplay } from './FinancesDisplay';
 import { ChapterBanner } from './ChapterBanner';
@@ -18,7 +18,8 @@ import {
   History,
   Users,
   Pause,
-  Compass
+  Compass,
+  Car
 } from 'lucide-react';
 
 export const GameHUD: React.FC = () => {
@@ -35,14 +36,19 @@ export const GameHUD: React.FC = () => {
     togglePauseModal,
     toggleMap,
     isPauseModalOpen,
-    isEvadingPolice
+    isEvadingPolice,
+    activeProtagonist,
+    switchProtagonist,
+    isDrivingMode,
+    toggleDrivingMode
   } = useGameStore();
 
   const [isMuted, setIsMuted] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showCrewModal, setShowCrewModal] = useState(false);
 
-  const currentNode = STORY_NODES[currentNodeId] || STORY_NODES['node_act1_keys_workshop'];
+  const mergedNodes = getMergedStoryNodes();
+  const currentNode = mergedNodes[currentNodeId] || mergedNodes['node_act1_keys_workshop'] || mergedNodes['node_new_cinematic_1'];
 
   // Trigger police radio siren on wanted level escalation
   const previousHeatRef = useRef(heatLevel);
@@ -52,6 +58,13 @@ export const GameHUD: React.FC = () => {
     }
     previousHeatRef.current = heatLevel;
   }, [heatLevel]);
+
+  // Pause radio when pause menu is open
+  useEffect(() => {
+    audioEngine.setGamePaused(isPauseModalOpen);
+  }, [isPauseModalOpen]);
+
+  const activePerk = PROTAGONIST_PERKS[activeProtagonist];
 
   const toggleSound = () => {
     const muted = audioEngine.toggleMute();
@@ -79,6 +92,42 @@ export const GameHUD: React.FC = () => {
               heatLevel={heatLevel}
               isEvadingPolice={isEvadingPolice}
             />
+
+            {/* Protagonist Switcher (Jason <-> Lucia) with Passive Perk */}
+            <button
+              onClick={() => switchProtagonist(activeProtagonist === 'jason' ? 'lucia' : 'jason')}
+              className="bg-zinc-900 hover:bg-zinc-800 border border-pink-500/50 hover:border-pink-400 text-white p-1 sm:px-2 sm:py-1 rounded-lg transition-all active:scale-95 flex items-center space-x-1.5 text-xs font-mono cursor-pointer"
+              title={`Cambiar Protagonista [C] • Activo: ${activeProtagonist.toUpperCase()} (${activePerk.name}: ${activePerk.description})`}
+            >
+              <img
+                src={
+                  activeProtagonist === 'lucia'
+                    ? '/assets/gta6/People/Lucia Caminos/Lucia_Caminos_01.jpg'
+                    : '/assets/gta6/People/Jason Duval/Jason_Duval_01.jpg'
+                }
+                alt={activeProtagonist}
+                className="w-5 h-5 rounded-full object-cover border border-pink-400"
+              />
+              <span className="hidden md:inline text-[11px] font-bold uppercase text-pink-300">
+                {activeProtagonist}
+              </span>
+              <span className="text-[9px] text-zinc-500 hidden lg:inline">[C]</span>
+            </button>
+
+            {/* Free-Roam 2D Map Driving Toggle */}
+            <button
+              onClick={() => toggleDrivingMode()}
+              className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg border transition-all active:scale-95 flex items-center space-x-1 text-xs font-mono cursor-pointer ${
+                isDrivingMode
+                  ? 'bg-cyan-500 text-black border-cyan-300 font-bold'
+                  : 'bg-zinc-900 hover:bg-cyan-950/80 border-zinc-750 hover:border-cyan-400 text-cyan-300'
+              }`}
+              title="Modo Conducción Libre 2D en Leonida (Tecla G)"
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline text-[11px] font-bold">Manejar</span>
+              <span className="text-[9px] opacity-75 hidden sm:inline">[G]</span>
+            </button>
 
             {/* Crew Status Modal Button */}
             <button

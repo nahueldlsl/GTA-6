@@ -3,13 +3,13 @@
 // ============================================================================
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore, PROTAGONIST_PERKS } from '../../store/gameStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { RECEIPT_DISMISS_DELAY_MS } from '../../constants/audio';
 import { ShieldCheck, ArrowRightLeft, Flame, CheckCircle } from 'lucide-react';
 
 export const DarkPayApp: React.FC = () => {
-  const { cleanCash, dirtyCash, washMoney, heatLevel, buyBlackMarketItem, bribePolice, inventory } = useGameStore();
+  const { cleanCash, dirtyCash, washMoney, heatLevel, buyBlackMarketItem, bribePolice, inventory, activeProtagonist } = useGameStore();
 
   const [activeTab, setActiveTab] = useState<'WASH' | 'MARKET'>('WASH');
   const [washAmount, setWashAmount] = useState<number>(Math.min(50000, dirtyCash));
@@ -60,28 +60,33 @@ export const DarkPayApp: React.FC = () => {
     {
       id: 'body_armor_tactical',
       name: 'Chaleco Blindado de Kevlar',
-      desc: 'Protección antibalas para tiroteos de alta intensidad',
+      desc: 'Absorbe hasta 2 choques policiales en el mapa 2D sin subir búsqueda.',
+      perk: '🛡️ Escudo de Impacto Activo en Conducción',
       price: 15000,
       icon: '🛡️'
     },
     {
       id: 'c4_breach_charges',
       name: 'Cargas de Demolición C4',
-      desc: 'Explosivo plástico para volar puertas blindadas de bancos',
+      desc: 'Vuela la puerta de la bóveda del First National en el Acto V desbloqueando la salida rápida.',
+      perk: '💣 Atajo Táctico de $3M en el Asalto al Banco',
       price: 25000,
       icon: '💣'
     },
     {
       id: 'tuned_muscle_car',
       name: 'Muscle Car V8 Modificado',
-      desc: 'Suspensión alta y motor reforzado para fugar por Grassrivers',
+      desc: '+22% velocidad máxima, 2x recarga de nitro y luces de neón bajo el chasis.',
+      perk: '⚡ Mejora Permanente del Vehículo en Leonida 2D',
       price: 45000,
       icon: '🏎️'
     }
   ];
 
   const currentMethod = methods[selectedMethod];
-  const calculatedFee = Math.floor((washAmount * currentMethod.fee) / 100);
+  const feeMultiplier = PROTAGONIST_PERKS[activeProtagonist].washFeeMultiplier;
+  const effectiveFeePct = currentMethod.fee * feeMultiplier;
+  const calculatedFee = Math.floor((washAmount * effectiveFeePct) / 100);
   const calculatedClean = Math.max(0, washAmount - calculatedFee);
 
   const handleWash = () => {
@@ -295,9 +300,19 @@ export const DarkPayApp: React.FC = () => {
                   <div className="flex items-center space-x-2.5 truncate">
                     <span className="text-xl">{item.icon}</span>
                     <div className="truncate">
-                      <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                      <div className="flex items-center gap-1.5">
+                        <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                        {alreadyOwned && (
+                          <span className="text-[8px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 uppercase">
+                            Equipado
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-zinc-400 truncate block">
                         {item.desc}
+                      </span>
+                      <span className="text-[9px] font-mono text-cyan-300 block mt-0.5 font-bold">
+                        {item.perk}
                       </span>
                     </div>
                   </div>

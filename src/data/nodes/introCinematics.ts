@@ -26,7 +26,7 @@ export const INTRO_CINEMATICS: Record<string, StoryNode> = {
     video: { 
       id: 'cinematic_2',
       title: 'Woman Sprinting',
-      url: 'Woman_sprinting_from_futuristic_._202608261611',
+      url: 'Woman_sprinting_from_futuristic_…_202608261611',
       durationSec: 15,
       themeStyle: 'police_chase'
     },

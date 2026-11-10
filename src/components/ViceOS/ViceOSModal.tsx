@@ -9,6 +9,8 @@ import { SignalApp } from './SignalApp';
 import { InstaViceApp } from './InstaViceApp';
 import { ViceMapsApp } from './ViceMapsApp';
 import { ViceRadioApp } from './ViceRadioApp';
+import { DarkPayApp } from './DarkPayApp';
+import { HeistPlannerApp } from './HeistPlannerApp';
 import type { PhoneAppId } from '../../types/game';
 import {
   MessageSquare,
@@ -17,7 +19,9 @@ import {
   Radio,
   X,
   Wifi,
-  Battery
+  Battery,
+  ShieldCheck,
+  Target
 } from 'lucide-react';
 
 interface AppRegistryItem {
@@ -58,6 +62,20 @@ const APPS: AppRegistryItem[] = [
     icon: <Camera className="w-4 h-4 sm:w-5 sm:h-5" />,
     activeColor: 'text-orange-400',
     component: InstaViceApp
+  },
+  {
+    id: 'darkpay',
+    name: 'DarkPay',
+    icon: <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />,
+    activeColor: 'text-emerald-400',
+    component: DarkPayApp
+  },
+  {
+    id: 'heistplanner',
+    name: 'Atracos',
+    icon: <Target className="w-4 h-4 sm:w-5 sm:h-5" />,
+    activeColor: 'text-red-400',
+    component: HeistPlannerApp
   }
 ];
 

@@ -10,11 +10,12 @@ import {
   Compass,
   Navigation,
   Maximize2,
-  ChevronRight
+  ChevronRight,
+  Car
 } from 'lucide-react';
 
 export const ViceMapsApp: React.FC = () => {
-  const { currentNodeId, jumpToNode, toggleMap, togglePhone } = useGameStore();
+  const { currentNodeId, jumpToNode, toggleMap, togglePhone, toggleDrivingMode } = useGameStore();
   const currentNode = STORY_NODES[currentNodeId] || STORY_NODES['node_act1_keys_workshop'];
 
   const [activeTab, setActiveTab] = useState<'GPS' | 'MISSIONS'>('GPS');
@@ -195,6 +196,17 @@ export const ViceMapsApp: React.FC = () => {
               >
                 <Compass className="w-3.5 h-3.5" />
                 <span>Abrir Mapa de Leonida Completo</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  togglePhone(false);
+                  toggleDrivingMode(true);
+                }}
+                className="w-full mt-1.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Conducir en Mapa 2D (G)</span>
               </button>
             </div>
           </div>

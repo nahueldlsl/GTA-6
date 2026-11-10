@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { STORY_NODES } from '../data/storyGraph';
+import { getMergedStoryNodes } from '../store/editorStore';
 import { audioEngine } from '../engine/audioEngine';
 import { HEAT_COOLDOWN_INTERVAL_MS, HEAT_COOLDOWN_EVADE_DELAY_MS } from '../constants/audio';
 import type { HeatLevel } from '../types/game';
@@ -17,52 +17,42 @@ const ACTIVE_PURSUIT_THEMES = new Set([
   'helipad_climax'
 ]);
 
+function isPursuitCombat(nodeId: string): boolean {
+  const currentNode = getMergedStoryNodes()[nodeId];
+  return ACTIVE_PURSUIT_THEMES.has(currentNode?.video?.themeStyle ?? '');
+}
+
 export function useHeatCooldown() {
   const intervalRef = useRef<number | null>(null);
   const evadeTimeoutRef = useRef<number | null>(null);
 
-  // Sync isEvadingPolice immediately whenever currentNodeId changes
-  useEffect(() => {
-    const s = useGameStore.getState();
-    const currentNode = STORY_NODES[s.currentNodeId];
-    const isCombat = ACTIVE_PURSUIT_THEMES.has(currentNode?.video?.themeStyle ?? '');
-
-    if (s.heatLevel > 0) {
-      if (isCombat) {
-        // Active pursuit: police have visual contact
+  const syncEvadingState = (nodeId: string, heatLevel: number) => {
+    if (heatLevel > 0) {
+      if (isPursuitCombat(nodeId)) {
         useGameStore.setState({ isEvadingPolice: false });
         if (evadeTimeoutRef.current !== null) {
           clearTimeout(evadeTimeoutRef.current);
           evadeTimeoutRef.current = null;
         }
       } else {
-        // Evading search: police lost direct sight
         useGameStore.setState({ isEvadingPolice: true });
       }
     } else {
       useGameStore.setState({ isEvadingPolice: false });
     }
+  };
+
+  // Sync isEvadingPolice immediately on mount
+  useEffect(() => {
+    const s = useGameStore.getState();
+    syncEvadingState(s.currentNodeId, s.heatLevel);
   }, []);
 
+  // Sync when currentNodeId or heatLevel changes
   useEffect(() => {
     const unsubscribe = useGameStore.subscribe((state, prevState) => {
       if (state.currentNodeId !== prevState.currentNodeId || state.heatLevel !== prevState.heatLevel) {
-        const currentNode = STORY_NODES[state.currentNodeId];
-        const isCombat = ACTIVE_PURSUIT_THEMES.has(currentNode?.video?.themeStyle ?? '');
-
-        if (state.heatLevel > 0) {
-          if (isCombat) {
-            useGameStore.setState({ isEvadingPolice: false });
-            if (evadeTimeoutRef.current !== null) {
-              clearTimeout(evadeTimeoutRef.current);
-              evadeTimeoutRef.current = null;
-            }
-          } else {
-            useGameStore.setState({ isEvadingPolice: true });
-          }
-        } else {
-          useGameStore.setState({ isEvadingPolice: false });
-        }
+        syncEvadingState(state.currentNodeId, state.heatLevel);
       }
     });
 
@@ -75,10 +65,7 @@ export function useHeatCooldown() {
       const s = useGameStore.getState();
       if (s.isPaused || s.heatLevel <= 0) return;
 
-      const currentNode = STORY_NODES[s.currentNodeId];
-      const isCombat = ACTIVE_PURSUIT_THEMES.has(currentNode?.video?.themeStyle ?? '');
-
-      if (!isCombat) {
+      if (!isPursuitCombat(s.currentNodeId)) {
         useGameStore.setState({ isEvadingPolice: true });
 
         if (evadeTimeoutRef.current !== null) {

@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { VideoAsset } from '../../types/game';
 import { audioEngine } from '../../engine/audioEngine';
+import { ProceduralCinematic } from './ProceduralCinematic';
 
 interface HybridVideoRendererProps {
   video: VideoAsset;
@@ -31,6 +32,22 @@ const GTA6_BACKDROP_MAP: Record<string, string> = {
   prison_cell: '/assets/gta6/Places/Ambrosia/Ambrosia_01.jpg'
 };
 
+// Real MP4 files shipped in /public/videos. Any other `video.url` is a visual theme id
+// (e.g. 'sunset_drive') and must NOT be fetched as a video (prevents 404 spam + slow fallback).
+const LOCAL_MP4_FILES = new Set<string>([
+  'Cinematic_k_video_Rockstar_G',
+  'GTAVI_Trailer_1',
+  'Lucia_fleeing_on_yellow_motorcycle_202608261614',
+  'Lucia_Video',
+  'Woman_sprinting_from_futuristic_…_202608261611'
+]);
+
+function resolveVideoSrc(url: string): string | null {
+  if (url.startsWith('http') || url.startsWith('/')) return url;
+  if (LOCAL_MP4_FILES.has(url)) return `/videos/${encodeURIComponent(url)}.mp4`;
+  return null;
+}
+
 export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
   video,
   heatLevel,
@@ -45,10 +62,8 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
   const [isVideoEnded, setIsVideoEnded] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Compute video source URL
-  const videoSrc = video.url.startsWith('http') || video.url.startsWith('/')
-    ? video.url
-    : `/videos/${video.url}.mp4`;
+  // Compute video source URL (null => static artwork scene only)
+  const videoSrc = resolveVideoSrc(video.url);
 
   // Compute backdrop image URL
   const backdropImageSrc = video.posterImage || GTA6_BACKDROP_MAP[video.themeStyle] || '/assets/gta6/hero.jpg';
@@ -66,13 +81,28 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
     img.onerror = () => setImageLoaded(false);
 
     const videoEl = videoRef.current;
-    if (videoEl) {
+    if (videoEl && videoSrc) {
       videoEl.src = videoSrc;
       videoEl.muted = false;
       videoEl.volume = 1.0;
       videoEl.load();
     }
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [video.id, videoSrc, backdropImageSrc]);
+
+  // Auto-ducking: lower the radio while a real video with audio is playing
+  const isVideoAudible = Boolean(videoSrc) && videoLoaded && !videoError && !isVideoEnded && !isPaused;
+  useEffect(() => {
+    audioEngine.duckMusic(isVideoAudible);
+  }, [isVideoAudible]);
+
+  useEffect(() => {
+    return () => audioEngine.duckMusic(false);
+  }, []);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -92,7 +122,9 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden bg-black select-none pointer-events-none">
+      {videoSrc && (
       <video
+        key={video.id}
         ref={videoRef}
         poster={backdropImageSrc}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 z-0 ${
@@ -104,7 +136,6 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
           setVideoLoaded(true);
           setVideoError(false);
           setIsVideoEnded(false);
-          audioEngine.stopMusic();
           if (videoRef.current && !isPaused) {
             videoRef.current.muted = false;
             videoRef.current.volume = 1.0;
@@ -127,6 +158,7 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
           }
         }}
       />
+      )}
 
       {/* 2. GTA VI 4K Pure Cinematic Scene Artwork with Gentle Motion */}
       {(!videoLoaded || videoError || isVideoEnded) && imageLoaded && (
@@ -138,6 +170,14 @@ export const HybridVideoRenderer: React.FC<HybridVideoRendererProps> = ({
           />
         </div>
       )}
+
+      {/* 3. Atmospheric & Police Pursuit Shaders */}
+      <ProceduralCinematic
+        video={video}
+        heatLevel={heatLevel}
+        isEvadingPolice={isEvadingPolice}
+        isQteActive={isQteActive}
+      />
     </div>
   );
 };

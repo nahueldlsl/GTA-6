@@ -4,53 +4,39 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { getMergedStoryNodes } from '../../store/editorStore';
+import { LEONIDA_MARKERS } from '../../data/mapMarkers.data';
 import { audioEngine } from '../../engine/audioEngine';
 import { VOICE_NOTE_PLAYBACK_MS } from '../../constants/audio';
-import { Send, Mic, Play, CheckCheck, Target, MapPin, Sparkles } from 'lucide-react';
+import { Send, Mic, Play, CheckCheck, Target, MapPin } from 'lucide-react';
 
 function getCurrentObjective(currentNodeId: string) {
-  switch (currentNodeId) {
-    case 'node_custom_intro':
-      return {
-        title: 'CAPÍTULO 0: INTRODUCCIÓN A LEONIDA',
-        objective: 'Mira el tráiler cinemático y elige tu siguiente paso: explorar la historia de Lucia o avanzar al taller de Brian.',
-        location: 'VICE CITY — COSTA ESTE',
-        character: 'Lucia & Jason',
-        reward: 'Desbloqueo de trama'
-      };
-    case 'node_custom_lucia_video':
-      return {
-        title: 'CAPÍTULO 0.5: LUCIA EN LEONIDA',
-        objective: 'Lucia está libre. Prepárate para reunirte con Brian Heder en los Cayos para conseguir transporte y primeros encargos.',
-        location: 'PENITENCIARÍA DE LEONIDA',
-        character: 'Lucia Caminos',
-        reward: '+10 Lealtad con Lucia'
-      };
-    case 'node_act1_keys_workshop':
-      return {
-        title: 'CAPÍTULO 1: EL ASFALTO DE LOS CAYOS',
-        objective: 'Brian Heder necesita que cobres la deuda de una lancha en Port Gellhorn. Escucha su oferta y toma el encargo.',
-        location: 'CAYOS DE LEONIDA — TALLER NÁUTICO',
-        character: 'Brian Heder',
-        reward: '$15,000 + Alquiler Gratis'
-      };
-    case 'node_act1_port_gellhorn_errand':
-      return {
-        title: 'CAPÍTULO 1.2: COBRO EN LA MARINA',
-        objective: 'Enfrenta al moroso de la lancha en Port Gellhorn y asegura el maletín sin llamar la atención de la policía.',
-        location: 'PORT GELLHORN MARINA',
-        character: 'Jason Duval',
-        reward: '$25,000 + Lancha Rápida'
-      };
-    default:
-      return {
-        title: 'MISIÓN EN CURSO: CONQUISTAR LEONIDA',
-        objective: 'Sigue los eventos de la historia, consulta las opciones en pantalla y mantén comunicación con tu equipo.',
-        location: 'ESTADO DE LEONIDA',
-        character: 'Lucia & Jason',
-        reward: 'Respeto & Dinero'
-      };
+  const nodes = getMergedStoryNodes();
+  const node = nodes[currentNodeId];
+  const marker = LEONIDA_MARKERS.find((m) => m.nodeId === currentNodeId);
+
+  if (node) {
+    const choiceSummary =
+      node.choices.length > 0
+        ? `Opciones tácticas (${node.choices.length}): ${node.choices.map((c) => c.label).join(' • ')}`
+        : node.video.dialogueSubtitle || marker?.description || 'Avanza en la escena cinemática actual.';
+
+    return {
+      title: `${node.actTitle ? node.actTitle + ' — ' : ''}${node.chapterTitle}`.toUpperCase(),
+      objective: marker?.description || node.phoneNotification?.message || choiceSummary,
+      location: node.location || marker?.district || 'ESTADO DE LEONIDA',
+      character: marker?.characterName || node.video.speaker || node.phoneNotification?.sender || 'Lucia & Jason',
+      reward: marker?.reward || (node.isEnding ? `Desenlace: ${node.endingType || 'Historia'}` : 'Respeto & Dinero')
+    };
   }
+
+  return {
+    title: 'MISIÓN EN CURSO: CONQUISTAR LEONIDA',
+    objective: 'Sigue los eventos de la historia, consulta las opciones en pantalla y mantén comunicación con tu equipo.',
+    location: 'ESTADO DE LEONIDA',
+    character: 'Lucia & Jason',
+    reward: 'Respeto & Dinero'
+  };
 }
 
 export const SignalApp: React.FC = () => {

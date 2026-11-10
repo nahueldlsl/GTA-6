@@ -13,7 +13,7 @@ export interface EditorStore {
 
 export const useEditorStore = create<EditorStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isEditorOpen: false,
       toggleEditor: () => set((state) => ({ isEditorOpen: !state.isEditorOpen })),
       customNodes: {},

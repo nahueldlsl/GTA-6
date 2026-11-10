@@ -3,29 +3,9 @@
 // ============================================================================
 
 import type { AudioContextManager } from './AudioContextManager';
+import { STATION_TRACK_MAP } from '../../constants/radio';
 
-export const STATION_TRACK_MAP: Record<string, { src: string; title: string; artist: string }> = {
-  station_rock: {
-    src: '/music/tom_petty.mp3',
-    title: 'Love Is a Long Road',
-    artist: 'Tom Petty'
-  },
-  station_wave: {
-    src: '/music/tame_impala.mp3',
-    title: 'Loser',
-    artist: 'Tame Impala'
-  },
-  station_latino: {
-    src: '/music/bad_bunny.mp3',
-    title: 'EoO (DeBÍ TiRAR MáS FOToS)',
-    artist: 'Bad Bunny'
-  },
-  station_flash: {
-    src: '/music/joy_crookes.mp3',
-    title: "Feet Don't Fail Me Now",
-    artist: 'Joy Crookes'
-  }
-};
+export { STATION_TRACK_MAP };
 
 export class ProceduralMusicSynth {
   private manager: AudioContextManager;
@@ -69,6 +49,23 @@ export class ProceduralMusicSynth {
   public stop() {
     this.isPlaying = false;
     this.stopAllAudio();
+  }
+
+  /**
+   * Game-level pause (pause menu). Pauses the element without forgetting that the
+   * radio was on, so it resumes exactly where it was when the game is unpaused.
+   */
+  public setGamePaused(paused: boolean) {
+    if (!this.audioElement) return;
+    if (paused) {
+      this.audioElement.pause();
+    } else if (this.isPlaying) {
+      this.audioElement.play().catch(() => {});
+    }
+  }
+
+  public get playing(): boolean {
+    return this.isPlaying;
   }
 
   private stopAllAudio() {

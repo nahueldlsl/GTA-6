@@ -3,10 +3,12 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
-import { Play, Sparkles } from 'lucide-react';
+import { Play, Sparkles, FastForward, Car } from 'lucide-react';
 
 interface TitleScreenProps {
   onStart: () => void;
+  onStartAct1?: () => void;
+  onStartFreeRoam?: () => void;
 }
 
 const ARTWORK_WALLPAPERS = [
@@ -19,7 +21,7 @@ const ARTWORK_WALLPAPERS = [
   '/assets/gta6/wallpapers/art_07_dimez.jpg'
 ];
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onStartAct1, onStartFreeRoam }) => {
   const [bgIndex, setBgIndex] = useState(0);
 
   // Rotate loading screen artworks every 6.5 seconds
@@ -92,15 +94,41 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
           El calor en los Cayos de Leonida no se respira; se muerde. Jason Duval regresa al taller de Brian Heder intentando escapar de su pasado. Cuando el destino cruza su camino con Lucia Caminos, ambos descubrirán que la única forma de conquistar Leonida es cambiando las reglas del juego juntos.
         </p>
 
-        {/* Launch Button */}
-        <button
-          onClick={onStart}
-          className="mt-8 group relative inline-flex items-center gap-3.5 px-10 py-4 text-base sm:text-lg font-black uppercase tracking-widest bg-gradient-to-r from-pink-600 via-orange-500 to-cyan-500 hover:from-pink-500 hover:to-cyan-400 text-white rounded-2xl shadow-[0_0_50px_rgba(255,42,133,0.7)] transform hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40"
-        >
-          <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
-          <span>INICIAR EXPERIENCIA</span>
-          <Sparkles className="w-4 h-4 text-yellow-300 animate-spin" />
-        </button>
+        {/* Launch Buttons Grid */}
+        <div className="mt-7 flex flex-col items-center gap-3 w-full max-w-md">
+          <button
+            onClick={onStart}
+            className="w-full group relative inline-flex items-center justify-center gap-3 px-8 py-3.5 text-sm sm:text-base font-black uppercase tracking-widest bg-gradient-to-r from-pink-600 via-orange-500 to-cyan-500 hover:from-pink-500 hover:to-cyan-400 text-white rounded-2xl shadow-[0_0_40px_rgba(255,42,133,0.7)] transform hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-white/40"
+          >
+            <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
+            <span>HISTORIA COMPLETA (PRÓLOGO)</span>
+            <Sparkles className="w-4 h-4 text-yellow-300 animate-spin" />
+          </button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
+            {onStartAct1 && (
+              <button
+                onClick={onStartAct1}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-mono font-bold uppercase tracking-wider bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 hover:border-cyan-400 text-cyan-300 hover:text-white rounded-xl shadow-lg active:scale-95 transition-all cursor-pointer"
+                title="Saltar cinemáticas de intro y empezar en Acto I"
+              >
+                <FastForward className="w-3.5 h-3.5" />
+                <span>Saltar al Acto 1</span>
+              </button>
+            )}
+
+            {onStartFreeRoam && (
+              <button
+                onClick={onStartFreeRoam}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-mono font-bold uppercase tracking-wider bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 hover:border-pink-500 text-pink-300 hover:text-white rounded-xl shadow-lg active:scale-95 transition-all cursor-pointer"
+                title="Entrar directo a conducir por Leonida en 2D"
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Manejo Libre (2D)</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 4. CLEAN BOTTOM BRANDING WATERMARK */}

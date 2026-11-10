@@ -22,6 +22,30 @@ import { getMergedStoryNodes } from './editorStore';
 import { audioEngine } from '../engine/audioEngine';
 import { processEffects } from '../services/effectProcessor';
 import { BOT_REPLY_DELAY_MS } from '../constants/audio';
+import { formatCurrency } from '../utils/formatCurrency';
+
+export interface GameToast {
+  id: number;
+  title: string;
+  message: string;
+  variant: 'success' | 'info' | 'warning' | 'danger';
+}
+
+// Protagonist passive perks (single source of truth)
+export const PROTAGONIST_PERKS = {
+  jason: {
+    name: 'Enfoque Militar',
+    description: '+25% de tiempo en decisiones y QTE. Mejor control en vehículos pesados.',
+    decisionTimeMultiplier: 1.25,
+    washFeeMultiplier: 1
+  },
+  lucia: {
+    name: 'Sindicato Callejero',
+    description: '-50% de comisión al lavar dinero en DarkPay. Moto ágil en el mapa.',
+    decisionTimeMultiplier: 1,
+    washFeeMultiplier: 0.5
+  }
+} as const;
 
 export interface GameStore extends GameState {
   // Global Pause & Accessibility
@@ -46,7 +70,19 @@ export interface GameStore extends GameState {
     visible: boolean;
   } | null;
 
+  // In-game GTA style toast (replaces browser alert())
+  gameToast: GameToast | null;
+
+  // Free-roam playable 2D map
+  isDrivingMode: boolean;
+  completedContracts: string[];
+
   // Actions
+  showToast: (title: string, message: string, variant?: GameToast['variant']) => void;
+  dismissToast: () => void;
+  toggleDrivingMode: (force?: boolean) => void;
+  completeContract: (contractId: string, rewards: { clean?: number; dirty?: number; respect?: number }) => boolean;
+  addHeat: (amount?: number) => void;
   switchProtagonist: (protagonist: 'jason' | 'lucia') => void;
   unlockCrewMember: (memberId: CharacterId) => void;
   initGame: () => void;
@@ -138,6 +174,64 @@ function checkAndUnlockCrew(unlockedCrew: CharacterId[], nodeId: string): Charac
   return next;
 }
 
+// DRY / Information Expert helper for dual-wallet transactions (dirty-first, then clean)
+export function deductDualWalletFunds(
+  cleanCash: number,
+  dirtyCash: number,
+  cost: number
+): { success: boolean; newClean: number; newDirty: number } {
+  if (cleanCash + dirtyCash < cost) {
+    return { success: false, newClean: cleanCash, newDirty: dirtyCash };
+  }
+  let remaining = cost;
+  let newDirty = dirtyCash;
+  let newClean = cleanCash;
+
+  if (newDirty >= remaining) {
+    newDirty -= remaining;
+  } else {
+    remaining -= newDirty;
+    newDirty = 0;
+    newClean -= remaining;
+  }
+  return { success: true, newClean, newDirty };
+}
+
+// DRY helper for node phone notifications and messages
+function processNodePhoneNotification(
+  targetNode: StoryNode,
+  currentState: Pick<GameStore, 'unreadSignalCount' | 'signalMessages'>
+) {
+  let notificationBanner = null;
+  let unreadCount = currentState.unreadSignalCount;
+  const messages = [...currentState.signalMessages];
+
+  if (targetNode.phoneNotification) {
+    notificationBanner = {
+      app: targetNode.phoneNotification.app,
+      sender: targetNode.phoneNotification.sender,
+      message: targetNode.phoneNotification.message,
+      visible: true
+    };
+    unreadCount += 1;
+    audioEngine.playNotification();
+
+    if (targetNode.phoneNotification.app === 'signal') {
+      messages.push({
+        id: 'msg_' + Date.now(),
+        senderId: 'lucia' as CharacterId,
+        senderName: targetNode.phoneNotification.sender,
+        avatar: targetNode.phoneNotification.avatarUrl || '👩‍💻',
+        text: targetNode.phoneNotification.message,
+        timestamp: 'Ahora',
+        isIncoming: true
+      });
+    }
+  }
+
+  return { notificationBanner, unreadCount, messages };
+}
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
@@ -157,10 +251,67 @@ export const useGameStore = create<GameStore>()(
       unreadSignalCount: 1,
       isEvadingPolice: false,
       phoneNotificationBanner: null,
+      gameToast: null,
+      isDrivingMode: false,
+      completedContracts: [],
+
+      showToast: (title, message, variant = 'info') => {
+        set({ gameToast: { id: Date.now(), title, message, variant } });
+      },
+
+      dismissToast: () => {
+        set({ gameToast: null });
+      },
+
+      toggleDrivingMode: (force) => {
+        set((state) => {
+          const next = force !== undefined ? force : !state.isDrivingMode;
+          audioEngine.playSatelliteWhoosh();
+          return {
+            isDrivingMode: next,
+            isMapOpen: false,
+            isPhoneOpen: false,
+            isPauseModalOpen: false,
+            // Story playback pauses while the player is driving
+            isPaused: next
+          };
+        });
+      },
+
+      completeContract: (contractId, rewards) => {
+        const state = get();
+        if (state.completedContracts.includes(contractId)) {
+          get().showToast('CONTRATO YA COBRADO', 'Este trabajo ya fue completado. Busca nuevos contratos en Leonida.', 'warning');
+          return false;
+        }
+        audioEngine.playCashRegister();
+        set((s) => ({
+          completedContracts: [...s.completedContracts, contractId],
+          cleanCash: s.cleanCash + (rewards.clean || 0),
+          dirtyCash: s.dirtyCash + (rewards.dirty || 0),
+          respect: Math.min(100, s.respect + (rewards.respect || 0))
+        }));
+        return true;
+      },
+
+      addHeat: (amount = 1) => {
+        const current = get().heatLevel;
+        const next = Math.min(5, current + amount) as HeatLevel;
+        if (next === current) return;
+        set({ heatLevel: next, isEvadingPolice: false });
+        audioEngine.setHeatLevel(next);
+      },
 
       switchProtagonist: (protagonist) => {
+        if (get().activeProtagonist === protagonist) return;
         audioEngine.playDecisionImpact();
         set({ activeProtagonist: protagonist });
+        const perk = PROTAGONIST_PERKS[protagonist];
+        get().showToast(
+          protagonist === 'jason' ? 'AHORA JUEGAS COMO JASON' : 'AHORA JUEGAS COMO LUCIA',
+          `${perk.name}: ${perk.description}`,
+          'info'
+        );
       },
 
       unlockCrewMember: (memberId) => {
@@ -267,35 +418,7 @@ export const useGameStore = create<GameStore>()(
         if (!targetNode) return;
 
         const unlocked = checkAndUnlockEnding(state.unlockedEndings, targetNode);
-
-        // Trigger phone notification if present on node
-        let notificationBanner = null;
-        let unreadCount = state.unreadSignalCount;
-        const messages = [...state.signalMessages];
-
-        if (targetNode.phoneNotification) {
-          notificationBanner = {
-            app: targetNode.phoneNotification.app,
-            sender: targetNode.phoneNotification.sender,
-            message: targetNode.phoneNotification.message,
-            visible: true
-          };
-          unreadCount += 1;
-          audioEngine.playNotification();
-
-          if (targetNode.phoneNotification.app === 'signal') {
-            messages.push({
-              id: 'msg_' + Date.now(),
-              senderId: 'lucia',
-              senderName: targetNode.phoneNotification.sender,
-              avatar: '👩‍💻',
-              text: targetNode.phoneNotification.message,
-              timestamp: 'Ahora',
-              isIncoming: true
-            });
-          }
-        }
-
+        const { notificationBanner, unreadCount, messages } = processNodePhoneNotification(targetNode, state);
         const nextCrew = checkAndUnlockCrew(state.unlockedCrew, choice.targetNodeId);
 
         set({
@@ -358,35 +481,7 @@ export const useGameStore = create<GameStore>()(
         if (!targetNode) return;
 
         const unlocked = checkAndUnlockEnding(state.unlockedEndings, targetNode);
-
-        // Trigger phone notification if present on node
-        let notificationBanner = null;
-        let unreadCount = state.unreadSignalCount;
-        const messages = [...state.signalMessages];
-
-        if (targetNode.phoneNotification) {
-          notificationBanner = {
-            app: targetNode.phoneNotification.app,
-            sender: targetNode.phoneNotification.sender,
-            message: targetNode.phoneNotification.message,
-            visible: true
-          };
-          unreadCount += 1;
-          audioEngine.playNotification();
-
-          if (targetNode.phoneNotification.app === 'signal') {
-            messages.push({
-              id: 'msg_' + Date.now(),
-              senderId: 'lucia',
-              senderName: targetNode.phoneNotification.sender,
-              avatar: targetNode.phoneNotification.avatarUrl || '👩‍💻',
-              text: targetNode.phoneNotification.message,
-              timestamp: 'Ahora',
-              isIncoming: true
-            });
-          }
-        }
-
+        const { notificationBanner, unreadCount, messages } = processNodePhoneNotification(targetNode, state);
         const nextCrew = checkAndUnlockCrew(state.unlockedCrew, nodeId);
 
         set({
@@ -443,7 +538,8 @@ export const useGameStore = create<GameStore>()(
           return { success: false, washedClean: 0 };
         }
 
-        const fee = (cleanAmount * feePct) / 100;
+        const effectiveFeePct = feePct * PROTAGONIST_PERKS[state.activeProtagonist].washFeeMultiplier;
+        const fee = (cleanAmount * effectiveFeePct) / 100;
         const washedClean = Math.floor(cleanAmount - fee);
 
         audioEngine.playCashRegister();
@@ -459,23 +555,9 @@ export const useGameStore = create<GameStore>()(
 
       buyBlackMarketItem: (itemId, name, price) => {
         const state = get();
-        const totalFunds = state.cleanCash + state.dirtyCash;
-        if (totalFunds < price) {
-          return { success: false, message: `Fondos insuficientes. Necesitas $${price.toLocaleString()}.` };
-        }
-
-        // Deduct from dirty cash first, then clean cash
-        let remainingPrice = price;
-        let newDirty = state.dirtyCash;
-        let newClean = state.cleanCash;
-
-        if (newDirty >= remainingPrice) {
-          newDirty -= remainingPrice;
-          remainingPrice = 0;
-        } else {
-          remainingPrice -= newDirty;
-          newDirty = 0;
-          newClean -= remainingPrice;
+        const deduction = deductDualWalletFunds(state.cleanCash, state.dirtyCash, price);
+        if (!deduction.success) {
+          return { success: false, message: `Fondos insuficientes. Necesitas ${formatCurrency(price)}.` };
         }
 
         const newInventory = state.inventory.includes(itemId)
@@ -485,8 +567,8 @@ export const useGameStore = create<GameStore>()(
         audioEngine.playCashRegister();
 
         set({
-          dirtyCash: newDirty,
-          cleanCash: newClean,
+          dirtyCash: deduction.newDirty,
+          cleanCash: deduction.newClean,
           inventory: newInventory,
           respect: Math.min(100, state.respect + 5)
         });
@@ -500,29 +582,17 @@ export const useGameStore = create<GameStore>()(
           return { success: false, message: 'No tienes estrellas de búsqueda activas.' };
         }
 
-        const totalFunds = state.cleanCash + state.dirtyCash;
-        if (totalFunds < cost) {
-          return { success: false, message: `Necesitas $${cost.toLocaleString()} para sobornar al contacto policial.` };
-        }
-
-        let remaining = cost;
-        let newDirty = state.dirtyCash;
-        let newClean = state.cleanCash;
-
-        if (newDirty >= remaining) {
-          newDirty -= remaining;
-        } else {
-          remaining -= newDirty;
-          newDirty = 0;
-          newClean -= remaining;
+        const deduction = deductDualWalletFunds(state.cleanCash, state.dirtyCash, cost);
+        if (!deduction.success) {
+          return { success: false, message: `Necesitas ${formatCurrency(cost)} para sobornar al contacto policial.` };
         }
 
         audioEngine.playPoliceScanner();
         audioEngine.setHeatLevel(0);
 
         set({
-          dirtyCash: newDirty,
-          cleanCash: newClean,
+          dirtyCash: deduction.newDirty,
+          cleanCash: deduction.newClean,
           heatLevel: 0,
           isEvadingPolice: false
         });
@@ -558,11 +628,14 @@ export const useGameStore = create<GameStore>()(
       },
 
       sendSignalMessage: (text) => {
+        const isLucia = get().activeProtagonist === 'lucia';
         const userMsg: SignalMessage = {
           id: 'msg_user_' + Date.now(),
-          senderId: 'jason',
-          senderName: 'Jason Duval (Tú)',
-          avatar: '/assets/gta6/People/Jason Duval/Jason_Duval_01.jpg',
+          senderId: isLucia ? 'lucia' : 'jason',
+          senderName: isLucia ? 'Lucia Caminos (Tú)' : 'Jason Duval (Tú)',
+          avatar: isLucia
+            ? '/assets/gta6/People/Lucia Caminos/Lucia_Caminos_01.jpg'
+            : '/assets/gta6/People/Jason Duval/Jason_Duval_01.jpg',
           text,
           timestamp: 'Ahora',
           isIncoming: false
@@ -581,15 +654,25 @@ export const useGameStore = create<GameStore>()(
 
         // Bot automated response
         botReplyTimeoutId = window.setTimeout(() => {
-          const reply: SignalMessage = {
-            id: 'msg_val_reply_' + Date.now(),
-            senderId: 'lucia',
-            senderName: 'Lucia Caminos',
-            avatar: '/assets/gta6/People/Lucia Caminos/Lucia_Caminos_01.jpg',
-            text: 'Recibido, Jason. Frecuencias de la policía de Leonida monitoreadas. Todo listo para la siguiente jugada.',
-            timestamp: 'Ahora',
-            isIncoming: true
-          };
+          const reply: SignalMessage = isLucia
+            ? {
+                id: 'msg_val_reply_' + Date.now(),
+                senderId: 'jason',
+                senderName: 'Jason Duval',
+                avatar: '/assets/gta6/People/Jason Duval/Jason_Duval_01.jpg',
+                text: 'Entendido, Lucia. Tengo el auto listo y el tanque lleno. Dime dónde y llego.',
+                timestamp: 'Ahora',
+                isIncoming: true
+              }
+            : {
+                id: 'msg_val_reply_' + Date.now(),
+                senderId: 'lucia',
+                senderName: 'Lucia Caminos',
+                avatar: '/assets/gta6/People/Lucia Caminos/Lucia_Caminos_01.jpg',
+                text: 'Recibido, Jason. Frecuencias de la policía de Leonida monitoreadas. Todo listo para la siguiente jugada.',
+                timestamp: 'Ahora',
+                isIncoming: true
+              };
           audioEngine.playNotification();
           set((s) => ({
             signalMessages: [...s.signalMessages, reply],
@@ -653,12 +736,40 @@ export const useGameStore = create<GameStore>()(
           instaPosts: INSTA_POSTS,
           unreadSignalCount: 1,
           isEvadingPolice: false,
-          phoneNotificationBanner: null
+          phoneNotificationBanner: null,
+          gameToast: null,
+          isDrivingMode: false,
+          isMapOpen: false,
+          completedContracts: []
         });
       }
     }),
     {
-      name: 'vice_dynasty_save_v1_5'
+      name: 'vice_dynasty_save_v1_5',
+      // Only persist game progress — never transient UI state (modals, pause, toasts),
+      // otherwise reloading the page could leave the game stuck paused or inside a modal.
+      partialize: (state) => ({
+        version: state.version,
+        timestamp: state.timestamp,
+        currentNodeId: state.currentNodeId,
+        cleanCash: state.cleanCash,
+        dirtyCash: state.dirtyCash,
+        heatLevel: state.heatLevel,
+        respect: state.respect,
+        crewLoyalty: state.crewLoyalty,
+        unlockedCrew: state.unlockedCrew,
+        activeProtagonist: state.activeProtagonist,
+        inventory: state.inventory,
+        flags: state.flags,
+        history: state.history,
+        activeHeist: state.activeHeist,
+        unlockedEndings: state.unlockedEndings,
+        timerMode: state.timerMode,
+        hasCompletedTutorial: state.hasCompletedTutorial,
+        signalMessages: state.signalMessages,
+        unreadSignalCount: state.unreadSignalCount,
+        completedContracts: state.completedContracts
+      })
     }
   )
 );

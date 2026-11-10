@@ -4,7 +4,7 @@
 
 import React, { useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { MessageSquare, Radio, Camera, Navigation, X } from 'lucide-react';
+import { MessageSquare, Radio, Camera, Navigation, X, ShieldCheck, Target } from 'lucide-react';
 import { NOTIFICATION_DISPLAY_MS } from '../../constants/audio';
 import type { PhoneAppId } from '../../types/game';
 
@@ -18,6 +18,10 @@ function getAppIcon(app: PhoneAppId) {
       return <Camera className="w-4 h-4" />;
     case 'vicemaps':
       return <Navigation className="w-4 h-4" />;
+    case 'darkpay':
+      return <ShieldCheck className="w-4 h-4 text-emerald-400" />;
+    case 'heistplanner':
+      return <Target className="w-4 h-4 text-red-400" />;
     default:
       return <MessageSquare className="w-4 h-4" />;
   }

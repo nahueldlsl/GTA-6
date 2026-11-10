@@ -4,7 +4,9 @@
 
 import React from 'react';
 import type { StoryChoice } from '../../types/game';
-import { Flame, ChevronRight } from 'lucide-react';
+import { useGameStore } from '../../store/gameStore';
+import { checkChoiceConditions } from '../../services/conditionEvaluator';
+import { Flame, ChevronRight, Lock } from 'lucide-react';
 import { DANGER_LEVEL_STYLES } from '../../constants/hud';
 
 interface DecisionWindowProps {
@@ -28,6 +30,8 @@ export const DecisionWindow: React.FC<DecisionWindowProps> = ({
   dialogueSubtitle,
   speaker
 }) => {
+  const gameState = useGameStore();
+
   return (
     <>
       {/* 1. INTEGRATED DIALOGUE & SUBTITLES CARD */}
@@ -68,24 +72,42 @@ export const DecisionWindow: React.FC<DecisionWindowProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {choices.map((choice) => {
           const dangerStyle = DANGER_LEVEL_STYLES[choice.dangerLevel || 'LOW'];
+          const conditionCheck = checkChoiceConditions(gameState, choice.conditions);
+          const isLocked = choice.isLocked || conditionCheck.isLocked;
+          const lockHint = choice.lockHint || conditionCheck.lockHint;
 
           return (
             <button
               key={choice.id}
-              onClick={() => onChoiceClick(choice)}
-              disabled={choice.isLocked || isPaused}
-              className={`group relative text-left backdrop-blur-xl bg-black/85 border-2 p-3.5 rounded-xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer ${dangerStyle} ${
-                choice.isLocked ? 'opacity-50 cursor-not-allowed' : ''
+              onClick={() => {
+                if (!isLocked && !isPaused) {
+                  onChoiceClick(choice);
+                }
+              }}
+              disabled={isLocked || isPaused}
+              className={`group relative text-left backdrop-blur-xl border-2 p-3.5 rounded-xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer ${
+                isLocked
+                  ? 'bg-zinc-950/80 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed hover:translate-y-0'
+                  : `bg-black/85 ${dangerStyle}`
               }`}
             >
               <div className="flex items-start justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-black/70 border border-current">
                       {choice.dangerLevel}
                     </span>
+                    {isLocked && (
+                      <span className="text-[10px] font-mono text-red-400 flex items-center gap-1 font-bold">
+                        <Lock className="w-3 h-3" /> BLOQUEADO
+                      </span>
+                    )}
                   </div>
-                  <h4 className="text-sm sm:text-base font-bold text-white mt-1 group-hover:text-cyan-300 transition-colors">
+                  <h4
+                    className={`text-sm sm:text-base font-bold mt-1 transition-colors ${
+                      isLocked ? 'text-zinc-400' : 'text-white group-hover:text-cyan-300'
+                    }`}
+                  >
                     {choice.label}
                   </h4>
                   {choice.sublabel && (
@@ -93,8 +115,17 @@ export const DecisionWindow: React.FC<DecisionWindowProps> = ({
                       {choice.sublabel}
                     </p>
                   )}
+                  {isLocked && lockHint && (
+                    <p className="text-[10px] font-mono text-amber-400/90 mt-1.5 flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-600/30">
+                      <span>🔒 Requisito:</span> <span>{lockHint}</span>
+                    </p>
+                  )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 ml-2 mt-1" />
+                {!isLocked ? (
+                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 ml-2 mt-1" />
+                ) : (
+                  <Lock className="w-4 h-4 text-zinc-600 shrink-0 ml-2 mt-1" />
+                )}
               </div>
             </button>
           );
